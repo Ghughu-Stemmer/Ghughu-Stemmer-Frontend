@@ -1,10 +1,19 @@
-import { configureStore, ThunkAction, Action } from '@reduxjs/toolkit';
-import counterReducer from '../features/counter/counterSlice';
+import {
+  getDefaultMiddleware,
+  configureStore,
+  ThunkAction,
+  Action,
+} from "@reduxjs/toolkit";
+import rootReducer from "./rootReducer";
 
 export const store = configureStore({
-  reducer: {
-    counter: counterReducer,
-  },
+  reducer: rootReducer,
+  middleware: [
+    ...getDefaultMiddleware({
+      immutableCheck: false,
+      serializableCheck: false,
+    }),
+  ],
 });
 
 export type RootState = ReturnType<typeof store.getState>;

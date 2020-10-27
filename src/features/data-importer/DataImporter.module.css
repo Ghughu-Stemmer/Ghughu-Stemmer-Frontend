@@ -1,0 +1,11 @@
+.textbox {
+  font-size: 32px;
+  padding: 2px;
+  width: 100px;
+  text-align: center;
+}
+
+/* ::placeholder {
+  opacity: 0.6;
+  font-size: 90%;
+} */
