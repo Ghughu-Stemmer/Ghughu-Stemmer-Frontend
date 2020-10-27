@@ -3,7 +3,7 @@ import { AppThunk, RootState } from "../../app/store";
 import gql from "graphql-tag";
 import { ApolloClient } from "apollo-boost";
 
-interface DataImporterState {
+export interface DataImporterState {
   importStarted: boolean;
   fetchingData: boolean;
   fetchingCompleted: boolean;
@@ -51,6 +51,7 @@ export const dataImporterSlice = createSlice({
       state.uploadingCompleted = true;
       state.importCompleted = true;
     },
+    resetDataImporter: () => initialState,
   },
 });
 
@@ -60,6 +61,7 @@ const {
   startUploadingData,
   addUploadCount,
   completeUploadingData,
+  resetDataImporter,
 } = dataImporterSlice.actions;
 
 // The function below is called a thunk and allows us to perform async logic. It
@@ -70,6 +72,7 @@ export const importDataFromUrl = (
   importUrl: string,
   client: ApolloClient<object>
 ): AppThunk => async (dispatch) => {
+  dispatch(resetDataImporter());
   dispatch(startFetchingData());
   const fetchResponse = await fetch(importUrl);
   const wordRecords = await fetchResponse.json();
