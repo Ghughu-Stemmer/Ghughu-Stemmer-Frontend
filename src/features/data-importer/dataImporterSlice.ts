@@ -12,6 +12,7 @@ export interface DataImporterState {
   totalRecordsCount: number;
   uploadedRecordsCount: number;
   importCompleted: boolean;
+  importCancelled: boolean;
 }
 
 const initialState: DataImporterState = {
@@ -23,7 +24,25 @@ const initialState: DataImporterState = {
   totalRecordsCount: 0,
   uploadedRecordsCount: 0,
   importCompleted: false,
+  importCancelled: false,
 };
+
+const ADD_WORD_RECORD_BATCH_MUTATION = gql`
+  mutation addManyWords($records: String!) {
+    createWordRecordBatch(records: $records) {
+      id
+      inflectionalWord
+      isLastWord
+      isVerb
+      prefix
+      suffix
+      stemWord
+      targetStemWord
+      isAmbiguous
+      comment
+    }
+  }
+`;
 
 export const dataImporterSlice = createSlice({
   name: "dataImporter",
@@ -51,53 +70,56 @@ export const dataImporterSlice = createSlice({
       state.uploadingCompleted = true;
       state.importCompleted = true;
     },
+    cancelDataImporter: (state) => {
+      state.importCancelled = true;
+      state.fetchingData = false;
+      state.uploadingData = false;
+    },
     resetDataImporter: () => initialState,
   },
 });
 
-const {
+export const {
   startFetchingData,
   completeFetchingData,
   startUploadingData,
   addUploadCount,
   completeUploadingData,
   resetDataImporter,
+  cancelDataImporter,
 } = dataImporterSlice.actions;
 
-// The function below is called a thunk and allows us to perform async logic. It
-// can be dispatched like a regular action: `dispatch(incrementAsync(10))`. This
-// will call the thunk with the `dispatch` function as the first argument. Async
-// code can then be executed and other actions can be dispatched
 export const importDataFromUrl = (
   importUrl: string,
   client: ApolloClient<object>
-): AppThunk => async (dispatch) => {
+): AppThunk => async (dispatch, getState) => {
+  const controller = new AbortController();
+  let importCancelled = false;
+
+  const cancelletionManager = setInterval(() => {
+    if (getState().dataImporter.importCancelled) {
+      client.stop();
+      controller.abort();
+      importCancelled = true;
+    }
+  }, 200);
+
   dispatch(resetDataImporter());
   dispatch(startFetchingData());
-  const fetchResponse = await fetch(importUrl);
+
+  const fetchResponse = await fetch(importUrl, { signal: controller.signal });
   const wordRecords = await fetchResponse.json();
-  dispatch(completeFetchingData(wordRecords.length));
+  if (!importCancelled) {
+    dispatch(completeFetchingData(wordRecords.length));
+  }
 
   const BATCH_SIZE = 500;
-  const mutation = gql`
-    mutation addManyWords($records: String!) {
-      createWordRecordBatch(records: $records) {
-        id
-        inflectionalWord
-        isLastWord
-        isVerb
-        prefix
-        suffix
-        stemWord
-        targetStemWord
-        isAmbiguous
-        comment
-      }
-    }
-  `;
 
-  dispatch(startUploadingData());
-  for (let i = 0; i < wordRecords.length; i += BATCH_SIZE) {
+  if (!importCancelled) {
+    dispatch(startUploadingData());
+  }
+
+  for (let i = 0; i < wordRecords.length && !importCancelled; i += BATCH_SIZE) {
     const batch = wordRecords
       .slice(i, i + BATCH_SIZE)
       .map((wordRecord: any) => {
@@ -105,19 +127,20 @@ export const importDataFromUrl = (
         return wordRecord;
       });
 
-    const response = await client.mutate({
-      mutation,
+    await client.mutate({
+      mutation: ADD_WORD_RECORD_BATCH_MUTATION,
       variables: { records: JSON.stringify(batch) },
     });
-    console.log(response);
     dispatch(addUploadCount(batch.length));
   }
-  dispatch(completeUploadingData());
+
+  if (!importCancelled) {
+    dispatch(completeUploadingData());
+  }
+
+  clearInterval(cancelletionManager);
 };
 
-// The function below is called a selector and allows us to select a value from
-// the state. Selectors can also be defined inline where they're used instead of
-// in the slice file. For example: `useSelector((state: RootState) => state.dataImporter.value)`
 export const selectDataImporter = (state: RootState) => state.dataImporter;
 
 export default dataImporterSlice.reducer;

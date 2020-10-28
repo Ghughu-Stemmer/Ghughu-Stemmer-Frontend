@@ -1,11 +1,14 @@
 import React, { CSSProperties, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Button, Input } from "antd";
-import { selectDataImporter, importDataFromUrl } from "./dataImporterSlice";
-import "./DataImporter.module.css";
 import { useApolloClient } from "react-apollo";
 import { ImportSteps } from "./ImportSteps";
-
+import {
+  selectDataImporter,
+  importDataFromUrl,
+  cancelDataImporter,
+} from "./dataImporterSlice";
+import "./DataImporter.module.css";
 
 export function DataImporter() {
   const dispatch = useDispatch();
@@ -48,18 +51,29 @@ export function DataImporter() {
             onChange={(e) => setImportUrl(e.target.value)}
             required
           />
-          <Button
-            key="importDataButton"
-            size="large"
-            htmlType="submit"
-            disabled={loading}
-          >
-            Import Data
-          </Button>
+
+          {!loading && (
+            <Button key="importDataButton" size="large" htmlType="submit">
+              Import Data
+            </Button>
+          )}
+
+          {loading && (
+            <Button
+              danger
+              type="primary"
+              key="cancelImportButton"
+              size="large"
+              htmlType="button"
+              onClick={() => dispatch(cancelDataImporter())}
+            >
+              Cancel
+            </Button>
+          )}
         </div>
       </form>
 
-      <div style={{ width: "40%", margin: 30 }}>
+      <div style={{ width: "40%", height: "30%", margin: 30 }}>
         <ImportSteps dataImporter={dataImporter} />
       </div>
     </>

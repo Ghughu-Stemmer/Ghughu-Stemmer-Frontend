@@ -1,9 +1,16 @@
 import React from "react";
 import { Steps } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { LoadingOutlined, CloseOutlined } from "@ant-design/icons";
 import "./DataImporter.module.css";
 
 const { Step } = Steps;
+
+interface StepData {
+  title: String;
+  description: String;
+  icon?: React.ReactNode;
+  status: "finish" | "wait" | "process" | "error" | undefined;
+}
 
 function getUploadPercentage(
   uploadedRecordsCount: number,
@@ -16,8 +23,8 @@ function getUploadPercentage(
   return Math.round((uploadPercentage + Number.EPSILON) * 100) / 100;
 }
 
-export function ImportSteps({ dataImporter }: any) {
-  const {
+export function ImportSteps({
+  dataImporter: {
     importStarted,
     fetchingData,
     fetchingCompleted,
@@ -26,8 +33,9 @@ export function ImportSteps({ dataImporter }: any) {
     totalRecordsCount,
     uploadedRecordsCount,
     importCompleted,
-  } = dataImporter;
-
+    importCancelled,
+  },
+}: any) {
   if (!importStarted) {
     return null;
   }
@@ -37,53 +45,69 @@ export function ImportSteps({ dataImporter }: any) {
     totalRecordsCount
   );
 
-  let currentPos = 3;
-  if (fetchingData) {
-    currentPos = 0;
+  let steps: StepData[] = [];
+
+  if (fetchingCompleted) {
+    steps.push({
+      title: "Completed Fetching Data",
+      description: `Fetched ${totalRecordsCount} word records`,
+      status: "finish",
+    });
   }
+
+  if (uploadingCompleted) {
+    steps.push({
+      title: "Completed Uploading Records",
+      description: `Uploading word records complete`,
+      status: "finish",
+    });
+  }
+
+  if (importCompleted) {
+    steps.push({
+      title: "Data Import Successful",
+      description: `Successfully imported data`,
+      status: "finish",
+    });
+  }
+
+  if (fetchingData) {
+    steps.push({
+      title: "Fetching Data",
+      description: "Fetching word records from import source",
+      icon: <LoadingOutlined />,
+      status: "process",
+    });
+  }
+
   if (uploadingData) {
-    currentPos = 1;
+    steps.push({
+      title: `Uploading Records (${uploadPercentage}%)`,
+      description: "Fetching word records from import source",
+      icon: <LoadingOutlined />,
+      status: !importCancelled ? "process" : "error",
+    });
+  }
+
+  if (importCancelled) {
+    steps.push({
+      title: `Import Cancelled`,
+      description: "",
+      icon: <CloseOutlined />,
+      status: "error",
+    });
   }
 
   return (
-    <Steps current={currentPos} direction="vertical">
-      {fetchingCompleted && (
+    <Steps direction="vertical">
+      {steps.map((step) => (
         <Step
-          title="Completed Fetching Data"
-          description={`Fetched ${totalRecordsCount} word records`}
+          title={step.title}
+          description={step.description}
+          icon={step.icon}
+          status={step.status}
         />
-      )}
-
-      {uploadingCompleted && (
-        <Step
-          title="Completed Uploading Records"
-          description={`Uploading word records complete`}
-        />
-      )}
-
-      {importCompleted && (
-        <Step
-          title="Data Import Successful"
-          description={`Successfully imported data`}
-        />
-      )}
-
-      {fetchingData && (
-        <Step
-          title="Fetching Data"
-          status="process"
-          description="Fetching word records from import source"
-          icon={<LoadingOutlined />}
-        />
-      )}
-
-      {uploadingData && (
-        <Step
-          title={`Uploading Records (${uploadPercentage}%)`}
-          description="Fetching word records from import source"
-          icon={<LoadingOutlined />}
-        />
-      )}
+      ))}
     </Steps>
   );
 }
