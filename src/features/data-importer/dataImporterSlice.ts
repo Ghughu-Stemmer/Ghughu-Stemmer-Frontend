@@ -50,8 +50,10 @@ export const dataImporterSlice = createSlice({
   reducers: {
     // Use the PayloadAction type to declare the contents of `action.payload`
     startFetchingData: (state) => {
-      state.importStarted = true;
-      state.fetchingData = true;
+      if (!state.importCancelled) {
+        state.importStarted = true;
+        state.fetchingData = true;
+      }
     },
     completeFetchingData: (state, action: PayloadAction<number>) => {
       state.totalRecordsCount = action.payload;
@@ -59,7 +61,9 @@ export const dataImporterSlice = createSlice({
       state.fetchingCompleted = true;
     },
     startUploadingData: (state) => {
-      state.uploadingData = true;
+      if (!state.importCancelled) {
+        state.uploadingData = true;
+      }
     },
     addUploadCount: (state, action: PayloadAction<number>) => {
       const uploaded = action.payload;
