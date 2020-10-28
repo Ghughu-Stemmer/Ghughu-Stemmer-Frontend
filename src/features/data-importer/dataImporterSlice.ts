@@ -13,6 +13,7 @@ export interface DataImporterState {
   uploadedRecordsCount: number;
   importCompleted: boolean;
   importCancelled: boolean;
+  importError?: any;
 }
 
 const initialState: DataImporterState = {
@@ -25,6 +26,7 @@ const initialState: DataImporterState = {
   uploadedRecordsCount: 0,
   importCompleted: false,
   importCancelled: false,
+  importError: null,
 };
 
 const ADD_WORD_RECORD_BATCH_MUTATION = gql`
@@ -79,6 +81,11 @@ export const dataImporterSlice = createSlice({
       state.fetchingData = false;
       state.uploadingData = false;
     },
+    raiseError: (state, action: PayloadAction<any>) => {
+      state.importError = action.payload;
+      state.fetchingData = false;
+      state.uploadingData = false;
+    },
     resetDataImporter: () => initialState,
   },
 });
@@ -91,58 +98,69 @@ export const {
   completeUploadingData,
   resetDataImporter,
   cancelDataImporter,
+  raiseError,
 } = dataImporterSlice.actions;
 
 export const importDataFromUrl = (
   importUrl: string,
   client: ApolloClient<object>
 ): AppThunk => async (dispatch, getState) => {
-  const controller = new AbortController();
-  let importCancelled = false;
+  try {
+    const controller = new AbortController();
+    let importCancelled = false;
 
-  const cancelletionManager = setInterval(() => {
-    if (getState().dataImporter.importCancelled) {
-      client.stop();
-      controller.abort();
-      importCancelled = true;
+    const cancelletionManager = setInterval(() => {
+      if (getState().dataImporter.importCancelled) {
+        client.stop();
+        controller.abort();
+        importCancelled = true;
+      }
+    }, 200);
+
+    dispatch(resetDataImporter());
+    dispatch(startFetchingData());
+
+    const fetchResponse = await fetch(importUrl, { signal: controller.signal });
+    const wordRecords = await fetchResponse.json();
+    if (!importCancelled) {
+      dispatch(completeFetchingData(wordRecords.length));
     }
-  }, 200);
 
-  dispatch(resetDataImporter());
-  dispatch(startFetchingData());
+    const BATCH_SIZE = 500;
 
-  const fetchResponse = await fetch(importUrl, { signal: controller.signal });
-  const wordRecords = await fetchResponse.json();
-  if (!importCancelled) {
-    dispatch(completeFetchingData(wordRecords.length));
-  }
+    if (!importCancelled) {
+      dispatch(startUploadingData());
+    }
 
-  const BATCH_SIZE = 500;
+    for (
+      let i = 0;
+      i < wordRecords.length && !importCancelled;
+      i += BATCH_SIZE
+    ) {
+      const batch = wordRecords
+        .slice(i, i + BATCH_SIZE)
+        .map((wordRecord: any) => {
+          delete wordRecord.id;
+          return wordRecord;
+        });
 
-  if (!importCancelled) {
-    dispatch(startUploadingData());
-  }
-
-  for (let i = 0; i < wordRecords.length && !importCancelled; i += BATCH_SIZE) {
-    const batch = wordRecords
-      .slice(i, i + BATCH_SIZE)
-      .map((wordRecord: any) => {
-        delete wordRecord.id;
-        return wordRecord;
+      await client.mutate({
+        mutation: ADD_WORD_RECORD_BATCH_MUTATION,
+        variables: { records: JSON.stringify(batch) },
       });
+      dispatch(addUploadCount(batch.length));
+    }
 
-    await client.mutate({
-      mutation: ADD_WORD_RECORD_BATCH_MUTATION,
-      variables: { records: JSON.stringify(batch) },
-    });
-    dispatch(addUploadCount(batch.length));
+    if (!importCancelled) {
+      dispatch(completeUploadingData());
+    }
+
+    clearInterval(cancelletionManager);
+  } catch (err) {
+    if (!(err instanceof DOMException)) {
+      dispatch(raiseError(err));
+    }
   }
-
-  if (!importCancelled) {
-    dispatch(completeUploadingData());
-  }
-
-  clearInterval(cancelletionManager);
 };
 
 export const selectDataImporter = (state: RootState) => state.dataImporter;

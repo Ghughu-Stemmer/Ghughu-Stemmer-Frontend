@@ -34,6 +34,7 @@ export function ImportSteps({
     uploadedRecordsCount,
     importCompleted,
     importCancelled,
+    importError,
   },
 }: any) {
   if (!importStarted) {
@@ -93,6 +94,15 @@ export function ImportSteps({
     steps.push({
       title: `Import Cancelled`,
       description: "",
+      icon: <CloseOutlined />,
+      status: "error",
+    });
+  }
+
+  if (importError) {
+    steps.push({
+      title: `Import Failed`,
+      description: `${importError}`,
       icon: <CloseOutlined />,
       status: "error",
     });
