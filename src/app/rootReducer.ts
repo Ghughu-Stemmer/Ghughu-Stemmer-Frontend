@@ -2,13 +2,13 @@ import { combineReducers } from "@reduxjs/toolkit";
 import counterReducer from "../features/counter/counterSlice";
 import dataImporterReducer from "../features/data-importer/dataImporterSlice";
 import wordRecordReducer from "../features/word-records/wordRecordSlice";
-import appConfigReducer from "../features/app-config/appConfigSlice";
+import appStateReducer from "../features/app-config/appStateSlice";
 
 const rootReducer = combineReducers({
   counter: counterReducer,
   dataImporter: dataImporterReducer,
   wordRecords: wordRecordReducer,
-  appConfig: appConfigReducer,
+  appState: appStateReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

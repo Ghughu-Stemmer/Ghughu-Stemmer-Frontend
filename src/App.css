@@ -16,7 +16,7 @@ body {
 .App-logo {
   height: 20%;
   pointer-events: none;
-  margin: 20px;
+  margin: 40px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -44,4 +44,8 @@ body {
   100% {
     transform: translateY(0px);
   }
+}
+
+.logo a {
+  color: white;
 }

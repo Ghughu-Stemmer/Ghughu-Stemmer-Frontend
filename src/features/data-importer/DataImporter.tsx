@@ -1,7 +1,9 @@
 import React, { CSSProperties, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { setCurrentRoute } from "../app-config/appStateSlice";
 import { Button, Input } from "antd";
 import { useApolloClient } from "react-apollo";
+import logo from "../../logo.png";
 import { ImportSteps } from "./ImportSteps";
 import {
   selectDataImporter,
@@ -10,8 +12,11 @@ import {
 } from "./dataImporterSlice";
 import "./DataImporter.module.css";
 
+export const DATA_IMPORTER_ROUTE = "/data-importer";
+
 export function DataImporter() {
   const dispatch = useDispatch();
+  dispatch(setCurrentRoute(DATA_IMPORTER_ROUTE));
 
   const dataImporter = useSelector(selectDataImporter);
   const { fetchingData, uploadingData } = dataImporter;
@@ -29,11 +34,14 @@ export function DataImporter() {
     display: "flex",
     flexDirection: "row",
     width: "60%",
+    minWidth: "40vw",
     justifyContent: "center",
   };
 
   return (
-    <>
+    <header className="App-header">
+      <img src={logo} className="App-logo" alt="logo" />
+
       <form
         style={formStyle}
         onSubmit={(e) => {
@@ -76,6 +84,6 @@ export function DataImporter() {
       <div style={{ width: "40%", height: "30%", margin: 30 }}>
         <ImportSteps dataImporter={dataImporter} />
       </div>
-    </>
+    </header>
   );
 }
