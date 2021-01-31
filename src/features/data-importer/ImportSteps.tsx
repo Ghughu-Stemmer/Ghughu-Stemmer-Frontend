@@ -110,8 +110,9 @@ export function ImportSteps({
 
   return (
     <Steps direction="vertical">
-      {steps.map((step) => (
+      {steps.map((step, idx) => (
         <Step
+          key={`step-${idx}`}
           title={step.title}
           description={step.description}
           icon={step.icon}
